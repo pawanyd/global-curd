@@ -1,0 +1,188 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class GlobalController extends Controller
+{
+    public function index($model)
+    {
+        $modelClass = $this->getModelClass($model);
+        // Retrieve paginated records
+        $items = $modelClass::paginate(10);
+
+        // Get schema info for dynamic columns
+        $columns = $this->getTableColumns($model);
+
+        return view('index', [
+            'model' => $model,
+            'items' => $items,
+            'columns' => $columns,
+        ]);
+    }
+
+    public function create($model)
+    {
+        // Get schema info for dynamic form generation
+        $columns = $this->getTableColumns($model);
+
+        return view('create', [
+            'model' => $model,
+            'columns' => $columns,  // pass column info to the view
+        ]);
+    }
+
+    public function store(Request $request, $model)
+    {
+        $modelClass = $this->getModelClass($model);
+        $record = new $modelClass();
+
+        // Fill only the columns that actually exist in DB
+        $fillableColumns = array_keys($this->getTableColumns($model));
+        $data = $request->only($fillableColumns);
+
+        $record->forcefill($data);
+        $record->save();
+
+        return redirect()
+            ->route('global.index', $model)
+            ->with('success', "{$model} created successfully.");
+    }
+
+    public function show($model, $id)
+    {
+        $modelClass = $this->getModelClass($model);
+        $record = $modelClass::findOrFail($id);
+
+        // For demonstration, let's reuse the index view,
+        // or you could create your own 'show.blade.php' if you really want.
+        return view('index', [
+            'model' => $model,
+            'items' => [$record],
+        ]);
+    }
+
+    public function edit($model, $id)
+    {
+        $modelClass = $this->getModelClass($model);
+        $record = $modelClass::findOrFail($id);
+
+        // Get schema info for dynamic form generation
+        $columns = $this->getTableColumns($model);
+
+        return view('edit', [
+            'model' => $model,
+            'record' => $record,
+            'columns' => $columns,  // pass column info to the view
+        ]);
+    }
+
+    public function update(Request $request, $model, $id)
+    {
+        $modelClass = $this->getModelClass($model);
+        $record = $modelClass::findOrFail($id);
+
+        // Fill only the columns that actually exist in DB
+        $fillableColumns = array_keys($this->getTableColumns($model));
+        $data = $request->only($fillableColumns);
+
+        $record->forcefill($data);
+        $record->save();
+
+        return redirect()
+            ->route('global.index', $model)
+            ->with('success', "{$model} updated successfully.");
+    }
+
+    public function destroy($model, $id)
+    {
+        $modelClass = $this->getModelClass($model);
+        $record = $modelClass::findOrFail($id);
+        $record->delete();
+
+        return redirect()
+            ->route('global.index', $model)
+            ->with('success', "{$model} deleted successfully.");
+    }
+
+    /**
+     * Convert the string $model from route into a fully-qualified model class name.
+     */
+    private function getModelClass($model)
+    {
+        $studlyModelName = ucfirst($model);
+        $modelClass = "App\\Models\\{$studlyModelName}";
+
+        if (!class_exists($modelClass)) {
+            abort(404, "Model [{$modelClass}] not found.");
+        }
+        return $modelClass;
+    }
+
+    /**
+     * Retrieves the table columns and their data types for the specified model.
+     * Returns an array of column_name => column_type (or subtype for enum, etc.).
+     */
+    private function getTableColumns($model)
+    {
+        $modelClass = $this->getModelClass($model);
+        $instance = new $modelClass;
+        $table = $instance->getTable();
+
+        // Example row structure from SHOW COLUMNS:
+        // Field, Type, Null, Key, Default, Extra
+        $columns = DB::select("SHOW COLUMNS FROM `$table`");
+
+        $results = [];
+        foreach ($columns as $column) {
+            $field = $column->Field;
+            $type = strtolower($column->Type);
+
+            // We might want to skip certain columns
+            if (in_array($field, ['id', 'created_at', 'updated_at', 'deleted_at'])) {
+                continue;
+            }
+
+            // Try to parse out the "real" type, e.g. enum, tinyint, varchar(255), etc.
+            // We'll store both a "baseType" and "options" if it's an enum.
+            $columnInfo = [
+                'baseType' => null,
+                'options' => [],
+            ];
+
+            if (str_contains($type, 'enum')) {
+                $columnInfo['baseType'] = 'enum';
+                // parse out the allowed values from the type string, e.g. enum('draft','published')
+                preg_match("/enum\((.*)\)/", $type, $matches);
+                if (isset($matches[1])) {
+                    // split on comma, remove quotes
+                    $rawOptions = explode(',', $matches[1]);
+                    $options = array_map(function ($opt) {
+                        return trim($opt, "'");
+                    }, $rawOptions);
+                    $columnInfo['options'] = $options;
+                }
+            } elseif (str_contains($type, 'tinyint(1)')) {
+                // In MySQL, tinyint(1) often implies boolean fields
+                $columnInfo['baseType'] = 'boolean';
+            } elseif (str_contains($type, 'int')) {
+                $columnInfo['baseType'] = 'number';
+            } elseif (str_contains($type, 'varchar') || str_contains($type, 'text')) {
+                $columnInfo['baseType'] = 'text';
+            } elseif (str_contains($type, 'date')) {
+                // could be date, datetime, timestamp
+                $columnInfo['baseType'] = 'date';
+            } else {
+                // fallback - just treat it as text
+                $columnInfo['baseType'] = 'text';
+            }
+
+            // Put this into our $results array
+            $results[$field] = $columnInfo;
+        }
+
+        return $results;
+    }
+}

@@ -1,0 +1,80 @@
+<!-- resources/views/index.blade.php -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>{{ ucfirst($model) }} List</title>
+</head>
+
+<body>
+    <h1>{{ ucfirst($model) }} List</h1>
+
+    @if(session('success'))
+        <p style="color: green;">{{ session('success') }}</p>
+    @endif
+
+    <a href="{{ route('global.create', $model) }}">Create New {{ ucfirst($model) }}</a>
+
+    <table border="1" cellpadding="5" cellspacing="0" style="margin-top: 20px;">
+        <thead>
+            <tr>
+                @foreach($columns as $field => $info)
+                    <th>{{ ucfirst($field) }}</th>
+                @endforeach
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($items as $item)
+                    <tr>
+                        @foreach($columns as $field => $info)
+                                    @php
+                                        $baseType = $info['baseType'];
+                                        $value = $item->$field;
+                                    @endphp
+
+                                    <td>
+                                        @if($baseType === 'boolean')
+                                            {{ $value ? 'Yes' : 'No' }}
+                                        @elseif($baseType === 'enum')
+                                            {{ $value }}
+                                        @elseif($baseType === 'date')
+                                            @if($value)
+                                                {{ \Illuminate\Support\Carbon::parse($value)->format('Y-m-d') }}
+                                            @endif
+                                        @else
+                                            {{ $value }}
+                                        @endif
+                                    </td>
+                        @endforeach
+                        <td>
+                            <a href="{{ route('global.edit', [$model, $item->id]) }}">Edit</a> |
+                            <form action="{{ route('global.destroy', [$model, $item->id]) }}" method="POST"
+                                style="display:inline;">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit"
+                                    onclick="return confirm('Are you sure you want to delete this {{ $model }}?');">
+                                    Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+            @empty
+                <tr>
+                    <td colspan="{{ count($columns) + 1 }}">No {{ $model }} found.</td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    <!-- Pagination links -->
+    @if($items->hasPages())
+        <div style="margin-top:20px;">
+            {{ $items->links() }}
+        </div>
+    @endif
+
+</body>
+
+</html>

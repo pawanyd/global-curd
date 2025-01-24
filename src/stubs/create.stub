@@ -1,0 +1,65 @@
+<!-- resources/views/create.blade.php -->
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Create {{ ucfirst($model) }}</title>
+</head>
+
+<body>
+    <h1>Create New {{ ucfirst($model) }}</h1>
+
+    @if ($errors->any())
+        <div style="color: red;">
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <form action="{{ route('global.store', $model) }}" method="POST">
+        @csrf
+
+        @foreach($columns as $field => $info)
+                @php
+                    $baseType = $info['baseType'];
+                @endphp
+
+                <div style="margin-bottom: 1rem;">
+                    <label for="{{ $field }}">{{ ucfirst($field) }}</label><br>
+
+                    @if($baseType === 'text')
+                        <input type="text" name="{{ $field }}" id="{{ $field }}" value="{{ old($field) }}">
+                    @elseif($baseType === 'number')
+                        <input type="number" name="{{ $field }}" id="{{ $field }}" value="{{ old($field) }}">
+                    @elseif($baseType === 'boolean')
+                        <!-- For a tinyint(1) field, treat it as a checkbox -->
+                        <input type="checkbox" name="{{ $field }}" id="{{ $field }}" value="1" {{ old($field) ? 'checked' : '' }}>
+                    @elseif($baseType === 'date')
+                        <!-- Could be a date/datetime field -->
+                        <input type="date" name="{{ $field }}" id="{{ $field }}" value="{{ old($field) }}">
+                    @elseif($baseType === 'enum')
+                        <!-- For enum fields, create a select dropdown -->
+                        <select name="{{ $field }}" id="{{ $field }}">
+                            <option value="">-- select --</option>
+                            @foreach($info['options'] as $option)
+                                <option value="{{ $option }}" {{ old($field) == $option ? 'selected' : '' }}>
+                                    {{ $option }}
+                                </option>
+                            @endforeach
+                        </select>
+                    @else
+                        <!-- Fallback to text for any unhandled type -->
+                        <input type="text" name="{{ $field }}" id="{{ $field }}" value="{{ old($field) }}">
+                    @endif
+                </div>
+        @endforeach
+
+        <button type="submit">Save {{ ucfirst($model) }}</button>
+    </form>
+</body>
+
+</html>

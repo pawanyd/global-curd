@@ -1,0 +1,64 @@
+<!-- resources/views/edit.blade.php -->
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Edit {{ ucfirst($model) }}</title>
+</head>
+
+<body>
+    <h1>Edit {{ ucfirst($model) }}</h1>
+
+    @if ($errors->any())
+        <div style="color: red;">
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <form action="{{ route('global.update', [$model, $record->id]) }}" method="POST">
+        @csrf
+        @method('PUT')
+
+        @foreach($columns as $field => $info)
+                @php
+                    $baseType = $info['baseType'];
+                    $existingValue = old($field, $record->$field);
+                @endphp
+
+                <div style="margin-bottom: 1rem;">
+                    <label for="{{ $field }}">{{ ucfirst($field) }}</label><br>
+
+                    @if($baseType === 'text')
+                        <input type="text" name="{{ $field }}" id="{{ $field }}" value="{{ $existingValue }}">
+                    @elseif($baseType === 'number')
+                        <input type="number" name="{{ $field }}" id="{{ $field }}" value="{{ $existingValue }}">
+                    @elseif($baseType === 'boolean')
+                        <input type="checkbox" name="{{ $field }}" id="{{ $field }}" value="1" {{ $existingValue ? 'checked' : '' }}>
+                    @elseif($baseType === 'date')
+                        <input type="date" name="{{ $field }}" id="{{ $field }}"
+                            value="{{ $existingValue ? \Illuminate\Support\Str::limit($existingValue, 10, '') : '' }}">
+                    @elseif($baseType === 'enum')
+                        <select name="{{ $field }}" id="{{ $field }}">
+                            <option value="">-- select --</option>
+                            @foreach($info['options'] as $option)
+                                <option value="{{ $option }}" {{ $existingValue == $option ? 'selected' : '' }}>
+                                    {{ $option }}
+                                </option>
+                            @endforeach
+                        </select>
+                    @else
+                        <input type="text" name="{{ $field }}" id="{{ $field }}" value="{{ $existingValue }}">
+                    @endif
+                </div>
+        @endforeach
+
+        <button type="submit">Update {{ ucfirst($model) }}</button>
+    </form>
+</body>
+
+</html>

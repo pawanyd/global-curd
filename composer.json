@@ -1,0 +1,33 @@
+{
+    "name": "pawanyd/global-crud",
+    "description": "A Global CRUD package for Laravel",
+    "keywords": [
+        "laravel",
+        "crud",
+        "global-controller"
+    ],
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Pawan Kumar",
+            "email": "pawan@example.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.0",
+        "laravel/framework": "^10.0|^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "pawanyd\\GlobalCrud\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "pawanyd\\GlobalCrud\\GlobalCrudServiceProvider"
+            ]
+        }
+    }
+}
