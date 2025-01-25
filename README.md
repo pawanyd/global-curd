@@ -22,7 +22,7 @@ Ensure you have a functional Laravel project with database connectivity set up b
 
 1. **Install via Composer**  
    ```bash
-   composer require pawanyd/global-crud
+   composer require pawanyd/global-crud:dev-main
    
 2. **Publish the stubs**
    ```bash
